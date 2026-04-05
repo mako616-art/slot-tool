@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>スロット判定ツール</title>
+
+<style>
+body {
+  background: #111;
+  color: white;
+  font-family: sans-serif;
+  padding: 20px;
+}
+
+.top-image {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.top-panels {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.panel {
+  flex: 1;
+  background: #222;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 5px;
+}
+
+button {
+  background: orange;
+  font-weight: bold;
+}
+
+.result {
+  margin-top: 20px;
+  padding: 15px;
+  background: #333;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+/* スマホ */
+@media (max-width: 600px) {
+  .top-panels {
+    flex-direction: column;
+  }
+}
+</style>
+
+</head>
+<body>
+
+<img src="images/panel.jpg" class="top-image">
+
+<h1>🎰 スロット判定ツール</h1>
+
+<div class="top-panels">
+  <div class="panel">
+    <h3>モンキーターンV</h3>
+    <p>狙い：350G〜</p>
+  </div>
+  <div class="panel">
+    <h3>北斗の拳</h3>
+    <p>狙い：650G〜</p>
+  </div>
+  <div class="panel">
+    <h3>カバネリ</h3>
+    <p>狙い：500G〜</p>
+  </div>
+</div>
+
+<h2>入力</h2>
+
+<select id="machine">
+  <option value="monkey">モンキーターンV</option>
+  <option value="hokuto">北斗の拳</option>
+  <option value="kabaneri">カバネリ</option>
+</select>
+
+<input id="game" type="number" placeholder="G数">
+
+<button onclick="judge()">判定</button>
+
+<div id="result" class="result"></div>
+
+<script>
+function judge() {
+  const machine = document.getElementById("machine").value;
+  const game = parseInt(document.getElementById("game").value);
+  const result = document.getElementById("result");
+
+  if (isNaN(game)) {
+    result.innerText = "G数を入力して";
+    result.style.background = "#444";
+    return;
+  }
+
+  let text = "";
+  let color = "";
+  let hourly = 0;
+
+  // モンキー
+  if (machine === "monkey") {
+    if (game >= 350) {
+      text = "打てる";
+      color = "green";
+      hourly = 1800;
+    } else if (game >= 250) {
+      text = "微妙";
+      color = "orange";
+      hourly = 800;
+    } else {
+      text = "打てない";
+      color = "red";
+      hourly = 0;
+    }
+  }
+
+  // 北斗
+  if (machine === "hokuto") {
+    if (game >= 650) {
+      text = "打てる";
+      color = "green";
+      hourly = 2000;
+    } else if (game >= 500) {
+      text = "微妙";
+      color = "orange";
+      hourly = 900;
+    } else {
+      text = "打てない";
+      color = "red";
+      hourly = 0;
+    }
+  }
+
+  // カバネリ
+  if (machine === "kabaneri") {
+    if (game >= 500) {
+      text = "打てる";
+      color = "green";
+      hourly = 1700;
+    } else if (game >= 350) {
+      text = "微妙";
+      color = "orange";
+      hourly = 700;
+    } else {
+      text = "打てない";
+      color = "red";
+      hourly = 0;
+    }
+  }
+
+  result.innerText = text + "（期待時給：" + hourly + "円）";
+  result.style.background = color;
+}
+</script>
+
+</body>
+</html>
