@@ -3,172 +3,197 @@
 <head>
 <meta charset="UTF-8">
 <title>スロット期待値ツール</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{
-  background:#111;
-  color:white;
+  margin:0;
   font-family:sans-serif;
+  background:#111;
+  color:#fff;
+}
+.container{
+  max-width:600px;
+  margin:auto;
   padding:20px;
 }
-
-.panel img{
-  width:100%;
-  max-width:800px;
-  border-radius:10px;
+h1{
+  text-align:center;
 }
-
+img{
+  width:100%;
+  border-radius:10px;
+  margin-bottom:20px;
+}
 select,input,button{
   width:100%;
-  padding:14px;
-  margin-top:10px;
-  border-radius:10px;
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:none;
   font-size:16px;
 }
-
 button{
-  background:orange;
+  background:#f90;
+  color:#000;
   font-weight:bold;
 }
-
 .result{
-  margin-top:20px;
-  padding:20px;
-  border-radius:12px;
-  font-size:18px;
-  white-space:pre-line;
+  background:#222;
+  padding:15px;
+  border-radius:10px;
+  margin-top:10px;
 }
+.good{color:#0f0;}
+.bad{color:#f33;}
+.note{color:#ff0;margin-top:8px;}
+.stop{color:#0ff;margin-top:8px;}
 </style>
 </head>
-
 <body>
 
+<div class="container">
 <h1>🎰 スロット期待値ツール</h1>
 
-<!-- ■ 画像（今まで通り） -->
-<div class="panel">
-  <img src="images/panel.jpg">
-</div>
+<img src="images/panel.jpg">
 
-<!-- ■ 入力 -->
 <select id="machine">
-  <option value="カバネリ">カバネリ</option>
-  <option value="モンキー">モンキーターンV</option>
-  <option value="北斗">北斗の拳</option>
+  <option value="hokuto">北斗の拳</option>
+  <option value="kabaneri">カバネリ</option>
+  <option value="monkey">モンキーターンV</option>
 </select>
 
 <input id="game" type="number" placeholder="現在G数">
-<input id="through" type="number" placeholder="スルー回数（カバネリ用）">
 
-<select id="shortened">
-  <option value="false">通常</option>
-  <option value="true">短縮（リセ/ST後）</option>
+<select id="state">
+  <option value="normal">通常</option>
+  <option value="reset">設定変更</option>
 </select>
+
+<input id="through" type="number" placeholder="スルー回数（カバネリ用）">
 
 <button onclick="calc()">判定</button>
 
-<div id="result" class="result"></div>
+<div id="out" class="result"></div>
+<div id="stNote" class="note"></div>
+<div id="stopLine" class="stop"></div>
+
+</div>
 
 <script>
 
-// =========================
-// モンキー（実データ）
-const monkeyEV = {
-  0:-600,50:-453,100:-281,150:-81,200:152,
-  250:424,300:740,350:1108,400:1537,
-  450:2036,500:2617,550:3295,600:4084,
-  650:5002,700:6072,750:7319
+// =====================
+// 北斗
+// =====================
+const hokuto = {
+  normal:{0:-500,100:-200,200:-100,300:0,400:800,500:1500,600:2200,650:2800,700:3300,750:4000,800:4500},
+  reset:{0:0,100:300,200:600,300:1000,400:1800,500:2600,600:3500,650:4200,700:4800,750:5500,800:6000}
 };
 
-// =========================
-// カバネリ（スルー別）
-const kabaneriEV = {
-  0:[-526,-76,637,1770,3568],
-  50:[-129,320,1034,2166,3964],
-  100:[344,793,1507,2639,4437],
-  150:[-179,271,984,2117,3915],
-  200:[83,533,1246,2379,4177],
-  250:[406,855,1569,2701,4499],
-  300:[-214,236,949,2082,3880],
-  350:[-54,395,1109,2241,4039],
-  400:[145,594,1308,2440,4238],
-  450:[393,843,1556,2689,4487],
-  500:[342,791,1505,2637,4435],
-  550:[626,1075,1789,2922,4719],
-  600:[981,1431,2144,3277,5075]
+// =====================
+// カバネリ
+// =====================
+const kabaneri = {
+  0:{400:100,500:300,600:1000,650:1500},
+  1:{300:200,400:800,500:1500,600:2500},
+  2:{0:600,100:1000,200:1500,300:2000,400:3000},
+  3:{0:1500,100:2000,200:3000,300:4000},
+  4:{0:3500,100:4500,200:5500}
 };
 
-// =========================
-// 北斗（簡易）
-const hokutoEV = {
-  200:-200,300:100,400:500,500:1000,600:2000
+// =====================
+// モンキー
+// =====================
+const monkey = {
+  normal:{0:-500,100:-300,200:-100,300:500,400:1200,450:1800,500:2500,550:3200},
+  reset:{0:300,100:600,200:1000,300:1800,400:2500,450:3200,500:4000,550:4800}
 };
 
-// =========================
-// 近い値取得
-function getNearest(map, g){
-  let keys = Object.keys(map).map(Number);
-  let nearest = keys.reduce((a,b)=>Math.abs(b-g)<Math.abs(a-g)?b:a);
-  return map[nearest];
+function getEV(table,g){
+  let keys = Object.keys(table).map(Number).sort((a,b)=>a-b);
+  let last = keys[0];
+  for(let k of keys){
+    if(g < k){
+      return table[last];
+    }
+    last = k;
+  }
+  return table[last];
 }
 
-// =========================
-// 判定処理
+function hokutoModeAdjust(g){
+  if(g < 200) return -300;
+  if(g < 400) return 0;
+  if(g < 600) return 200;
+  return 400;
+}
+
 function calc(){
-
-  const m = document.getElementById("machine").value;
-  const g = parseInt(document.getElementById("game").value);
-  const t = parseInt(document.getElementById("through").value) || 0;
-  const shortened = document.getElementById("shortened").value === "true";
-  const result = document.getElementById("result");
-
-  if(isNaN(g)){
-    result.innerText="G数入れろ";
-    return;
-  }
+  let m = document.getElementById("machine").value;
+  let g = parseInt(document.getElementById("game").value)||0;
+  let s = document.getElementById("state").value;
+  let t = parseInt(document.getElementById("through").value)||0;
 
   let ev = 0;
+  let note = "";
+  let stop = "";
 
-  // モンキー
-  if(m==="モンキー"){
-    ev = getNearest(monkeyEV, g);
-    if(shortened) ev += 700;
+  // 北斗
+  if(m==="hokuto"){
+    ev = getEV(hokuto[s],g);
+    ev += hokutoModeAdjust(g);
+    stop = "AT終了後ヤメ";
   }
 
   // カバネリ
-  if(m==="カバネリ"){
-    let base = getNearest(kabaneriEV, g);
-    ev = base[Math.min(t,4)];
+  if(m==="kabaneri"){
+    if(!kabaneri[t]) t=0;
+    ev = getEV(kabaneri[t],g);
+
+    if(g < 150){
+      note = "※ST後の可能性あり（強）：早当たりに期待";
+    }else if(g < 300){
+      note = "※ST後の可能性あり（中）：挙動次第で続行";
+    }
+
+    stop = "AT終了後即ヤメ（スルー回数だけ確認）";
   }
 
-  // 北斗
-  if(m==="北斗"){
-    ev = getNearest(hokutoEV, g);
+  // モンキー
+  if(m==="monkey"){
+    ev = getEV(monkey[s],g);
+    stop = "AT後即ヤメ（引き戻し確認後）";
   }
 
-  // 判定
-  let color="red";
-  let judge="捨て";
+  // 時間
+  let time = 30;
 
-  if(ev >= 1500){
-    color="green";
-    judge="打てる（強）";
-  }
-  else if(ev >= 1000){
-    color="lime";
-    judge="打てる";
-  }
-  else if(ev >= 500){
-    color="orange";
-    judge="保留";
+  if(m==="hokuto"){
+    if(g>=650) time=30;
+    if(g>=700) time=35;
   }
 
-  result.style.background=color;
+  if(m==="monkey"){
+    if(s==="reset") time=25;
+    else{
+      if(g>=450) time=30;
+      if(g>=500) time=35;
+    }
+  }
 
-  result.innerText =
-    "期待値：" + Math.round(ev) + "円\n" +
-    "判定：" + judge;
+  let hourly = Math.floor(ev/(time/60));
+
+  let text = `
+  🔥 期待値：${ev}円<br>
+  ⏱ 想定時間：${time}分<br>
+  💰 時給：${hourly}円<br><br>
+  ${ev>0 ? "<span class='good'>▶ 打つべき</span>" : "<span class='bad'>▶ 見送り</span>"}
+  `;
+
+  document.getElementById("out").innerHTML = text;
+  document.getElementById("stNote").innerHTML = note;
+  document.getElementById("stopLine").innerHTML = "■やめ時：" + stop;
 }
+
 </script>
 
 </body>
