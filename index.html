@@ -2,199 +2,215 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>スロット期待値ツール</title>
+<title>天井期待値ナビ</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#111;
-  color:#fff;
-}
-.container{
-  max-width:600px;
-  margin:auto;
-  padding:20px;
-}
-h1{
-  text-align:center;
-}
-img{
-  width:100%;
-  border-radius:10px;
-  margin-bottom:20px;
-}
+body{background:#111;color:#fff;font-family:sans-serif;margin:0;}
+.container{max-width:600px;margin:auto;padding:15px;}
+h1{text-align:center;}
+img{width:100%;border-radius:10px;margin-bottom:15px;}
 select,input,button{
-  width:100%;
-  padding:12px;
-  margin-bottom:10px;
-  border-radius:8px;
-  border:none;
-  font-size:16px;
+  width:100%;padding:12px;margin:8px 0;
+  border-radius:8px;border:none;font-size:16px;
 }
-button{
-  background:#f90;
-  color:#000;
-  font-weight:bold;
-}
-.result{
-  background:#222;
-  padding:15px;
-  border-radius:10px;
-  margin-top:10px;
-}
+button{background:orange;color:#000;font-weight:bold;}
+.result{background:#222;padding:15px;border-radius:10px;margin-top:10px;}
 .good{color:#0f0;}
+.mid{color:#ff0;}
 .bad{color:#f33;}
-.note{color:#ff0;margin-top:8px;}
+.note{color:#0ff;margin-top:8px;}
 .stop{color:#0ff;margin-top:8px;}
 </style>
 </head>
+
 <body>
-
 <div class="container">
-<h1>🎰 スロット期待値ツール</h1>
 
-<img src="images/panel.jpg">
+<h1>🎰 天井期待値ナビ</h1>
+<p>3秒で打つべき台が分かる</p>
 
-<select id="machine">
+<img id="machineImage" src="images/panel.jpg">
+
+<select id="machine" onchange="changeImage()">
   <option value="hokuto">北斗の拳</option>
   <option value="kabaneri">カバネリ</option>
   <option value="monkey">モンキーターンV</option>
+  <option value="vvv">ヴヴヴ</option>
 </select>
 
-<input id="game" type="number" placeholder="現在G数">
+<input type="number" id="game" placeholder="現在G数">
 
-<select id="state">
+<select id="mode">
   <option value="normal">通常</option>
-  <option value="reset">設定変更</option>
+  <option value="reset">リセット</option>
 </select>
 
-<input id="through" type="number" placeholder="スルー回数（カバネリ用）">
+<input type="number" id="through" placeholder="スルー回数（任意）">
 
 <button onclick="calc()">判定</button>
 
-<div id="out" class="result"></div>
-<div id="stNote" class="note"></div>
-<div id="stopLine" class="stop"></div>
+<div id="result" class="result"></div>
+<div id="note" class="note"></div>
+<div id="stop" class="stop"></div>
 
 </div>
 
 <script>
 
-// =====================
-// 北斗
-// =====================
-const hokuto = {
-  normal:{0:-500,100:-200,200:-100,300:0,400:800,500:1500,600:2200,650:2800,700:3300,750:4000,800:4500},
-  reset:{0:0,100:300,200:600,300:1000,400:1800,500:2600,600:3500,650:4200,700:4800,750:5500,800:6000}
-};
+// 画像切替（変更なし）
+function changeImage(){
+  let m = document.getElementById("machine").value;
+  document.getElementById("machineImage").src =
+    (m==="vvv") ? "images/vvv.jpg" : "images/panel.jpg";
+}
 
-// =====================
-// カバネリ
-// =====================
-const kabaneri = {
-  0:{400:100,500:300,600:1000,650:1500},
-  1:{300:200,400:800,500:1500,600:2500},
-  2:{0:600,100:1000,200:1500,300:2000,400:3000},
-  3:{0:1500,100:2000,200:3000,300:4000},
-  4:{0:3500,100:4500,200:5500}
-};
-
-// =====================
-// モンキー
-// =====================
-const monkey = {
-  normal:{0:-500,100:-300,200:-100,300:500,400:1200,450:1800,500:2500,550:3200},
-  reset:{0:300,100:600,200:1000,300:1800,400:2500,450:3200,500:4000,550:4800}
-};
-
+// 共通EV
 function getEV(table,g){
   let keys = Object.keys(table).map(Number).sort((a,b)=>a-b);
   let last = keys[0];
   for(let k of keys){
-    if(g < k){
-      return table[last];
-    }
+    if(g < k){ return table[last]; }
     last = k;
   }
   return table[last];
 }
 
-function hokutoModeAdjust(g){
-  if(g < 200) return -300;
-  if(g < 400) return 0;
-  if(g < 600) return 200;
-  return 400;
+// 北斗
+const hokuto = {
+  normal:{0:-500,100:-200,200:-100,300:0,400:800,500:1500,600:2200,650:2800,700:3300},
+  reset:{0:0,100:300,200:600,300:1000,400:1800,500:2600,600:3500}
+};
+function hokutoAdjust(g){
+  if(g<200) return -200;
+  if(g<400) return 0;
+  if(g<600) return 150;
+  return 250;
 }
 
+// カバネリ
+const kabaneri = {
+  0:{400:100,500:300,600:1000},
+  1:{300:200,400:800,500:1500},
+  2:{0:600,100:1000,200:1500,300:2000}
+};
+
+// モンキー
+const monkey = {
+  normal:{0:-500,100:-300,200:-100,300:500,400:1200,450:1800},
+  reset:{0:300,100:600,200:1000,300:1800,400:2500}
+};
+
+// =====================
+// 判定
+// =====================
 function calc(){
+
   let m = document.getElementById("machine").value;
   let g = parseInt(document.getElementById("game").value)||0;
-  let s = document.getElementById("state").value;
+  let mode = document.getElementById("mode").value;
   let t = parseInt(document.getElementById("through").value)||0;
 
   let ev = 0;
+  let result = "";
   let note = "";
   let stop = "";
+  let time = 30;
 
   // 北斗
   if(m==="hokuto"){
-    ev = getEV(hokuto[s],g);
-    ev += hokutoModeAdjust(g);
-    stop = "AT終了後ヤメ";
+    ev = getEV(hokuto[mode],g) + hokutoAdjust(g);
+    stop = "AT後ヤメ";
+    result = ev>1000 ? "<span class='good'>▶ 打つべき</span>" :
+             ev>0    ? "<span class='mid'>▶ 条件付き</span>" :
+                       "<span class='bad'>▶ 見送り</span>";
   }
 
   // カバネリ
   if(m==="kabaneri"){
     if(!kabaneri[t]) t=0;
     ev = getEV(kabaneri[t],g);
+    stop = "AT後即ヤメ";
 
-    if(g < 150){
-      note = "※ST後の可能性あり（強）：早当たりに期待";
-    }else if(g < 300){
-      note = "※ST後の可能性あり（中）：挙動次第で続行";
-    }
+    if(g<150) note="※STの可能性あり（強）";
+    else if(g<300) note="※STの可能性あり（中）";
 
-    stop = "AT終了後即ヤメ（スルー回数だけ確認）";
+    result = ev>1000 ? "<span class='good'>▶ 打つべき</span>" :
+             ev>0    ? "<span class='mid'>▶ 条件付き</span>" :
+                       "<span class='bad'>▶ 見送り</span>";
   }
 
   // モンキー
   if(m==="monkey"){
-    ev = getEV(monkey[s],g);
-    stop = "AT後即ヤメ（引き戻し確認後）";
+    ev = getEV(monkey[mode],g);
+    stop = "AT後即ヤメ";
+    result = ev>1000 ? "<span class='good'>▶ 打つべき</span>" :
+             ev>0    ? "<span class='mid'>▶ 条件付き</span>" :
+                       "<span class='bad'>▶ 見送り</span>";
   }
 
-  // 時間
-  let time = 30;
+  // =====================
+  // ヴヴヴ（最適化版）
+  // =====================
+  if(m==="vvv"){
 
-  if(m==="hokuto"){
-    if(g>=650) time=30;
-    if(g>=700) time=35;
-  }
+    stop = "AT後66Gまで";
 
-  if(m==="monkey"){
-    if(s==="reset") time=25;
+    // ★ スルー最優先
+    if(t >= 6){
+      result = "<span class='good'>🔥 打つべき（最強スルー）</span>";
+    }
+    else if(t >= 5){
+      result = "<span class='good'>▶ 打つべき（強スルー）</span>";
+    }
+    else if(t >= 4){
+      result = "<span class='good'>▶ 打つべき（スルー狙い）</span>";
+    }
+
+    // ★ G数
+    else if(g >= 700){
+      result = "<span class='good'>🔥 打つべき（主力）</span>";
+    }
+    else if(g >= 600){
+      result = "<span class='good'>▶ 打つべき</span>";
+    }
+
+    // ★ 複合
+    else if(g >= 400 && t >= 2){
+      result = "<span class='good'>▶ 打つべき（複合）</span>";
+    }
+
+    // ★ 微妙
+    else if(g >= 500){
+      result = "<span class='mid'>▶ 条件付き</span>";
+    }
+
     else{
-      if(g>=450) time=30;
-      if(g>=500) time=35;
+      result = "<span class='bad'>▶ 見送り</span>";
+    }
+
+    // 補足
+    if(t >= 5){
+      note = "※スルー天井直前ゾーン";
+    }
+    else if(t >= 3){
+      note = "※スルー期待あり";
+    }
+    else{
+      note = "※G数ベースで判断";
     }
   }
 
-  let hourly = Math.floor(ev/(time/60));
-
   let text = `
-  🔥 期待値：${ev}円<br>
-  ⏱ 想定時間：${time}分<br>
-  💰 時給：${hourly}円<br><br>
-  ${ev>0 ? "<span class='good'>▶ 打つべき</span>" : "<span class='bad'>▶ 見送り</span>"}
+  ${m!=="vvv" ? "🔥期待値："+ev+"円<br>💰時給："+Math.floor(ev/(time/60))+"円<br><br>" : ""}
+  ${result}
   `;
 
-  document.getElementById("out").innerHTML = text;
-  document.getElementById("stNote").innerHTML = note;
-  document.getElementById("stopLine").innerHTML = "■やめ時：" + stop;
+  document.getElementById("result").innerHTML = text;
+  document.getElementById("note").innerHTML = note;
+  document.getElementById("stop").innerHTML = "■やめ時："+stop;
 }
 
 </script>
-
 </body>
 </html>
